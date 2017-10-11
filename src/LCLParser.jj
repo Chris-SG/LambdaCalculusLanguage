@@ -1,0 +1,97 @@
+
+options
+{
+  STATIC = false;
+  OUTPUT_DIRECTORY = "parser";
+}
+
+PARSER_BEGIN(LCLParser)
+
+package parser;
+
+	public class LCLParser
+	{
+		public static void main( String[] Args )
+		{
+			try
+			{
+				LCLParser lParser = new LCLParser(new FileInputStream( Args[0] ));
+				ArrayList<LCLExpression> lExpressions = lParser.CompilationUnit();
+	
+				for ( LCLExpression e : lExpressions )
+				{
+					System.out.println( e );
+	
+					System.out.println( "Free names: " + e.freeNames() );
+					// validate substitution //
+					e = e.substitute( "pred", new LambdaVariable( "MinusOne" ) );
+					e = e.substitute( "fix", new LambdaVariable( "TheStrictFixPoint" ) );
+					System.out.println( e );
+					System.out.println( "Free names: " + e.freeNames() );
+				}
+			}
+			catch (ParseException e)
+			{
+				System.out.println("Syntax Error : \n"+ e.toString());
+			}
+			catch (FileNotFoundException e)
+			{
+				System.out.println( e.toString() );
+			}
+		}
+	}
+
+PARSER_END(LCLParser)
+
+void CompilationUnit() :
+{}
+{
+	LCLExp() < EOF >
+}
+
+void LCLExp() :
+{}
+{
+	< NUMBER >
+|
+	< VARIABLE >
+|
+	LOOKAHEAD(2)
+	"(" "lambda" < VARIABLE > "." LCLExp() ")"
+|
+	LOOKAHEAD(2)
+	"(" LCLExp() LCLExp() ")"
+|
+	LOOKAHEAD(2)
+	"(" "define" < VARIABLE > LCLExp() ")"
+|
+	LOOKAHEAD(2)
+	"(" "load" 	< STRING > ")"
+|
+	LOOKAHEAD(2)
+	"(" "if" LCLExp() LCLExp() LCLExp() ")"
+}
+
+SKIP :
+{
+	" "
+|
+	"\t"
+|
+	"\n"
+|
+	"\r\n"
+|
+	< "//" (~["\n"])* "\n" >
+}
+
+TOKEN :
+{
+	< VARIABLE : ["a"-"z","A"-"Z"] ( ["a"-"z","A"-"Z","0"-"9","_"])* >
+| 
+	< #EXPONENT : "E" ("+"|"-")? (["0"-"9"])+ >
+| 
+	< NUMBER : (["0"-"9"])+ ("." (["0"-"9"])*)? (< EXPONENT >)? >
+|
+	<  STRING : "\"" (~["\""])* "\"" >
+}
